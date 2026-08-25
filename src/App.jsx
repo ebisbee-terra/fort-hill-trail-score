@@ -4,6 +4,7 @@ import { usePositionEngine, OVERLAP_FACTOR } from "./position/usePositionEngine.
 import { STEMS } from "./audio/stemManifest.js";
 import { WAYPOINTS } from "./waypoints.js";
 import { CONTEXT_TRAILS, RIVER, WATER_POLYGONS, WOOD_POLYGONS } from "./basemap.js";
+import { resetVisitCount } from "./visitCount.js";
 
 const PAPER = "#EDEBE0";
 const INK = "#1B2A23";
@@ -197,8 +198,19 @@ function TrailMap({ path, waypoints, gains, position }) {
 
 export default function App() {
   const { status, error, boot, shutdown, setGain } = useAudioEngine();
-  const { position, gains, lastArrival, walking, setWalking, speed, setSpeed, path } =
-    usePositionEngine({ setGain: status === "running" ? setGain : null });
+  const {
+    position,
+    gains,
+    lastArrival,
+    walking,
+    setWalking,
+    speed,
+    setSpeed,
+    path,
+    isStill,
+    visitCount,
+    stillnessActive,
+  } = usePositionEngine({ setGain: status === "running" ? setGain : null });
 
   const audioOn = status === "running";
 
@@ -233,8 +245,25 @@ export default function App() {
         )}
 
         {lastArrival && (
-          <div style={{ ...label, color: CONTOUR, marginBottom: 8 }}>arrived: {lastArrival}</div>
+          <div style={{ ...label, color: CONTOUR, marginBottom: 4 }}>arrived: {lastArrival}</div>
         )}
+
+        <div style={{ ...label, color: CONTOUR, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+          <span>
+            visit {visitCount}
+            {stillnessActive ? " · stillness layer active" : isStill ? " · still (locked until visit 2)" : ""}
+          </span>
+          <button
+            onClick={() => {
+              resetVisitCount();
+              window.location.reload();
+            }}
+            style={{ ...label, fontSize: 9, background: "transparent", color: CONTOUR,
+              border: `1px solid ${CONTOUR}`, borderRadius: 3, padding: "2px 6px", cursor: "pointer" }}
+          >
+            reset visits
+          </button>
+        </div>
 
         <TrailMap path={path} waypoints={WAYPOINTS} gains={gains} position={position} />
 

@@ -5,11 +5,23 @@ import { createMockPositionSource } from "./mockPositionSource.js";
 import { createEmaSmoother } from "./smoothing.js";
 import { computeGains } from "./waypointGain.js";
 import { createArrivalTracker } from "./arrivalHysteresis.js";
+import { createStillnessDetector } from "./stillnessDetector.js";
+import { getAndIncrementVisitCount } from "../visitCount.js";
 
 const TICK_MS = 50; // 20 Hz, near real GPS cadence
 const SMOOTH_ALPHA = 0.13;
 const GAIN_RAMP_BARS = 1;
 const START_POINT = TRAIL_PATH[0];
+
+// CLAUDE.md: "stop moving for ~3s and an extra stem opens... unlocks on
+// visit 2+." STILL_STEM_ID has no corresponding file in stemManifest.js yet
+// (see README) -- AudioEngine.setGain no-ops for unknown stem ids, so wiring
+// this now is harmless and the layer will "just work" once a real stem is
+// added, same as the ridge/return waypoints.
+const STILL_STEM_ID = "still";
+const STILL_AFTER_MS = 3000;
+const STILL_MOVE_THRESHOLD_M = 2;
+const STILL_RAMP_BARS = 2;
 
 // Widens each waypoint's effective falloff radius beyond its authored value,
 // so neighboring waypoints' zones overlap more and someone spends longer
@@ -30,12 +42,25 @@ export function usePositionEngine({ setGain } = {}) {
   const [position, setPosition] = useState({ x: START_POINT[0], y: START_POINT[1] });
   const [gains, setGains] = useState(() => Object.fromEntries(WAYPOINTS.map((w) => [w.id, 0])));
   const [lastArrival, setLastArrival] = useState(null);
+  const [isStill, setIsStill] = useState(false);
+  const [visitCount, setVisitCount] = useState(1);
 
   const walkingRef = useRef(walking);
   const speedRef = useRef(speed);
   const sourceRef = useRef(null);
   const smootherRef = useRef(null);
   const trackerRef = useRef(null);
+  const stillnessRef = useRef(null);
+  const hasCountedVisitRef = useRef(false);
+
+  useEffect(() => {
+    // StrictMode double-invokes effects in dev; this ref (which persists
+    // across that simulated remount, unlike a state initializer) keeps the
+    // real localStorage increment to exactly once per actual page load.
+    if (hasCountedVisitRef.current) return;
+    hasCountedVisitRef.current = true;
+    setVisitCount(getAndIncrementVisitCount());
+  }, []);
 
   useEffect(() => {
     walkingRef.current = walking;
@@ -51,6 +76,10 @@ export function usePositionEngine({ setGain } = {}) {
       y: START_POINT[1],
     });
     trackerRef.current = createArrivalTracker(WAYPOINTS.map((w) => w.id));
+    stillnessRef.current = createStillnessDetector({
+      windowMs: STILL_AFTER_MS,
+      moveThresholdMeters: STILL_MOVE_THRESHOLD_M,
+    });
   }, []);
 
   useEffect(() => {
@@ -64,17 +93,33 @@ export function usePositionEngine({ setGain } = {}) {
       const smoothed = smootherRef.current(truePos);
       const nextGains = computeGains(smoothed, WAYPOINTS, OVERLAP_FACTOR);
       const arrivals = trackerRef.current.update(nextGains);
+      const nowStill = stillnessRef.current.update(smoothed, Date.now());
+      const stillnessActive = nowStill && visitCount >= 2;
 
       setPosition(smoothed);
       setGains(nextGains);
+      setIsStill(nowStill);
       if (arrivals.length > 0) setLastArrival(arrivals[arrivals.length - 1]);
 
       if (setGain) {
         for (const w of WAYPOINTS) setGain(w.id, nextGains[w.id], GAIN_RAMP_BARS);
+        setGain(STILL_STEM_ID, stillnessActive ? 1 : 0, STILL_RAMP_BARS);
       }
     }, TICK_MS);
     return () => clearInterval(id);
-  }, [setGain]);
+  }, [setGain, visitCount]);
 
-  return { position, gains, lastArrival, walking, setWalking, speed, setSpeed, path: PATH };
+  return {
+    position,
+    gains,
+    lastArrival,
+    walking,
+    setWalking,
+    speed,
+    setSpeed,
+    path: PATH,
+    isStill,
+    visitCount,
+    stillnessActive: isStill && visitCount >= 2,
+  };
 }

@@ -28,7 +28,9 @@ src/
     smoothing.js           # EMA smoothing on raw position (CLAUDE.md layer 1)
     waypointGain.js        # smoothstep gain-from-distance
     arrivalHysteresis.js   # 0.85 fire / 0.5 rearm (CLAUDE.md layer 3)
+    stillnessDetector.js   # sliding-window "hasn't moved in ~3s" check
     usePositionEngine.js   # ties the above together, drives AudioEngine.setGain
+  visitCount.js            # local-storage visit counter, gates the stillness layer
   waypoints.js             # real waypoint geometry/metadata, see provenance notes in the file
   trailPath.js             # the real one-way trail, walked node-by-node from OSM data
 ```
@@ -116,6 +118,27 @@ The OSM-confirmed node is used instead.
 `mockPositionSource.js` now walks `trailPath.js` there-and-back (bouncing at
 each end) rather than wrapping to the start, since the real walk is down the
 same stairs and back through the same walkway, not a closed loop.
+
+## Stillness layer
+
+Per CLAUDE.md: stop moving for ~3s and an extra stem opens, gated behind
+visit 2+ (a local-storage integer, no account/backend). The real app detects
+stillness via Core Motion / step counter, explicitly not GPS or HealthKit —
+but this dev harness only has mocked position, so `stillnessDetector.js`
+derives it from position instead: a sliding window checks whether the walker
+has stayed within a small radius for the full 3s (comparing against a single
+per-tick delta would misread ordinary walking as "still," since even normal
+walking speed only moves ~7cm per 50ms tick).
+
+There's no real "still" stem file yet, so `STILL_STEM_ID` in
+`usePositionEngine.js` has no matching entry in `stemManifest.js` —
+`AudioEngine.setGain` no-ops for unknown stem ids, so the whole mechanism is
+already wired and will "just work" the moment a real stem is added, the same
+extensibility pattern as the `ridge`/`return` waypoints.
+
+The dev harness shows the current visit number and a "reset visits" button
+(for testing both the locked and unlocked states without waiting for actual
+repeat visits) next to the transport controls.
 
 ## Dev harness map
 
