@@ -6,22 +6,28 @@ Not a roadmap/priority order — just don't-forget-this items.
 
 ## Content
 
-- [ ] **Bar-trim the 5 real stems** (`arp-1.wav`, `bloom-sax-1.wav`, `inst-5.wav`,
-      `stratus-piano-1.wav`, `string-raindrops.wav`). They're raw DAW bounces —
-      durations don't land on a whole bar count at 110 BPM, so the loop
-      crossfade (`AudioEngine`) is currently masking an audible seam rather
-      than looping cleanly. Content fix, not a code fix.
-- [ ] **Confirm/replace the stem → waypoint mapping** in `stemManifest.js`.
-      The 5 files were assigned to the first 5 waypoints in filename order —
-      arbitrary, not tied to the actual song structure.
-- [ ] **Record a "still" stem** for the stillness layer. The whole mechanism
-      (detection, visit-count gate, engine wiring) is already built and
-      waiting — it's silent until a real file with `id: "still"` is added to
-      `stemManifest.js`.
+- [ ] **Bar-trim the remaining 4 first-batch stems** (`bloom-sax-1.wav`,
+      `inst-5.wav`, `stratus-piano-1.wav`, `string-raindrops.wav`). Raw DAW
+      bounces — durations don't land on a whole bar count at 110 BPM, so the
+      loop crossfade (`AudioEngine`) is masking an audible seam rather than
+      looping cleanly. Content fix, not a code fix. (`arp-1.wav` no longer
+      matters here — it was swapped out for `opening-pad.wav`, which is
+      already cleanly bar-trimmed.)
+- [ ] **Confirm/replace the remaining stem → waypoint mapping** in
+      `stemManifest.js` (`stairs`, `overlook`, `earthwork`, `northrim`) —
+      still arbitrary, not tied to the actual song structure.
+- [x] ~~Record a "still" stem~~ — done, `stillness.wav` is wired in.
+- [ ] **Assign the 5 remaining second-batch stems** (`bfs.wav`, `jasno.wav`,
+      `staccato-vocals.wav`, `inst-5-alt.wav`, `string-raindrops-alt.wav`) to
+      specific weather/daypart states — staged in `public/audio/`, not wired
+      into `stemManifest.js` yet, pending exact state-by-state assignment.
 - [ ] Stems 6–7 (`ridge`, `return`) have waypoints but no audio yet.
 
 ## Trail geometry — needs on-the-ground confirmation
 
+- [x] ~~Walkway routing~~ — fixed. It previously never actually used
+      Woodland Loop Trail; corrected against a user-marked-up map
+      screenshot, now starting from the Valley Parkway lot.
 - [ ] **Earthworks waypoint position** — not derivable from OSM (it's a
       National Register site, deliberately unmapped). Currently placed
       heuristically in `waypoints.js`, flagged `UNCONFIRMED`.
@@ -69,7 +75,10 @@ Not a roadmap/priority order — just don't-forget-this items.
 - [ ] Capacitor wrapper (iOS/Android) — background audio, background
       location. Everything so far is browser-only with mocked GPS.
 - [ ] Lock-screen media card (the primary during-walk interface per
-      CLAUDE.md) — native work.
+      CLAUDE.md) — a visual preview exists in the dev harness now
+      (`LockScreenPreview` in `App.jsx`), but the real native lock-screen
+      integration (MPNowPlayingInfoCenter / Android media session) is
+      unstarted native work.
 - [ ] Mic capture feature (sing a note at the overlook/earthworks, pitch-snap
       into the key) — not started.
 
