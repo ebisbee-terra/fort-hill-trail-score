@@ -140,6 +140,21 @@ The dev harness shows the current visit number and a "reset visits" button
 (for testing both the locked and unlocked states without waiting for actual
 repeat visits) next to the transport controls.
 
+## Condition icons
+
+`conditionIcons.jsx` draws CLAUDE.md's weather (Clear/Overcast/Wet) and
+time-of-day (Morning/Midday/Golden/Dusk) icons in the map's own visual
+language — a surveyed sun, a contour-line cloud, a horizon arc — rather than
+borrowed weather-app glyphs. Daypart is visualized as the sun's position
+along a fixed arc (low-left at morning, overhead at midday, low-right at
+golden), with dusk as its own icon once the sun reaches the horizon.
+
+This is the icon system only. `weather` and `daypart` in `App.jsx` are
+manually picked via the selector rows at the bottom of the dev harness, not
+yet driven by a real weather fetch or a solar-altitude calculation from
+actual time/location, and not yet wired to the audio engine (no weather stem
+or daypart filter/reverb chain exists yet).
+
 ## Dev harness map
 
 `basemap.js` holds real surrounding context from the same OSM export —

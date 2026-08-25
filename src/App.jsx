@@ -5,6 +5,19 @@ import { STEMS } from "./audio/stemManifest.js";
 import { WAYPOINTS } from "./waypoints.js";
 import { CONTEXT_TRAILS, RIVER, WATER_POLYGONS, WOOD_POLYGONS } from "./basemap.js";
 import { resetVisitCount } from "./visitCount.js";
+import { ConditionIcon } from "./conditionIcons.jsx";
+
+const WEATHER_OPTIONS = [
+  ["clear", "Clear"],
+  ["overcast", "Overcast"],
+  ["wet", "Wet"],
+];
+const DAYPART_OPTIONS = [
+  ["morning", "Morning"],
+  ["midday", "Midday"],
+  ["golden", "Golden"],
+  ["dusk", "Dusk"],
+];
 
 const PAPER = "#EDEBE0";
 const INK = "#1B2A23";
@@ -94,6 +107,35 @@ function GainRow({ stemLabel, level }) {
 const toLine = (pts) =>
   pts.reduce((d, [x, y], i) => d + (i ? ` L ${x} ${y}` : `M ${x} ${y}`), "");
 const toArea = (pts) => toLine(pts) + " Z";
+
+function Selector({ name, options, current, onPick }) {
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ ...label, fontSize: 9, color: CONTOUR, opacity: 0.6, marginBottom: 4 }}>{name}</div>
+      <div style={{ display: "flex", gap: 5 }}>
+        {options.map(([value, text]) => (
+          <button
+            key={value}
+            onClick={() => onPick(value)}
+            style={{
+              ...label,
+              flex: 1,
+              fontSize: 9,
+              padding: "6px 4px",
+              background: current === value ? PAPER : "transparent",
+              color: current === value ? INK : CONTOUR,
+              border: `1px solid ${current === value ? CONTOUR : "#3a4a41"}`,
+              borderRadius: 3,
+              cursor: "pointer",
+            }}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ZoomButton({ children, onClick, disabled }) {
   return (
@@ -214,6 +256,12 @@ export default function App() {
 
   const audioOn = status === "running";
 
+  // Manually picked for now -- not yet wired to a real weather fetch or
+  // solar-altitude calculation, and not yet driving the audio engine (no
+  // weather stem or daypart filter/reverb chain exists yet). Just the icons.
+  const [weather, setWeather] = useState("clear");
+  const [daypart, setDaypart] = useState("midday");
+
   return (
     <div style={{ background: RIG, minHeight: "100vh", color: PAPER, padding: "24px 20px" }}>
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
@@ -236,6 +284,15 @@ export default function App() {
           <TransportButton onClick={() => setSpeed((s) => (s === 1 ? 4 : s === 4 ? 10 : 1))}>
             {speed}×
           </TransportButton>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <ConditionIcon kind={weather} color={PAPER} />
+          <ConditionIcon kind={daypart} color={PAPER} />
+          <span style={{ ...label, color: CONTOUR, opacity: 0.7 }}>
+            {WEATHER_OPTIONS.find(([v]) => v === weather)[1]} ·{" "}
+            {DAYPART_OPTIONS.find(([v]) => v === daypart)[1]}
+          </span>
         </div>
 
         {status === "error" && (
@@ -272,6 +329,9 @@ export default function App() {
             <GainRow key={s.id} stemLabel={s.label} level={gains[s.id] ?? 0} />
           ))}
         </div>
+
+        <Selector name="weather" options={WEATHER_OPTIONS} current={weather} onPick={setWeather} />
+        <Selector name="time of day" options={DAYPART_OPTIONS} current={daypart} onPick={setDaypart} />
 
         <div style={{ ...label, color: CONTOUR, opacity: 0.6, marginTop: 20, lineHeight: 1.8 }}>
           stems must be loaded (start audio) before gain changes are audible
