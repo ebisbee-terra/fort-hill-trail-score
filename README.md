@@ -29,7 +29,8 @@ src/
     waypointGain.js        # smoothstep gain-from-distance
     arrivalHysteresis.js   # 0.85 fire / 0.5 rearm (CLAUDE.md layer 3)
     usePositionEngine.js   # ties the above together, drives AudioEngine.setGain
-  waypoints.js             # waypoint geometry/metadata (placeholder coordinates)
+  waypoints.js             # real waypoint geometry/metadata, see provenance notes in the file
+  trailPath.js             # the real one-way trail, walked node-by-node from OSM data
 ```
 
 ## Running it
@@ -89,8 +90,32 @@ falloff radius beyond its authored value, so neighboring waypoints' zones
 overlap more and a walker spends longer inside 2-3 blended layers instead of
 passing through one stem at a time (CLAUDE.md's target). It's a multiplier
 applied at gain-calculation time, not a change to the radius values
-themselves — tune it there. It'll need revisiting once real GPS-derived
-waypoint spacing (in meters) replaces the current placeholder coordinates.
+themselves — tune it there.
+
+## Real trail geometry
+
+`waypoints.js` and `trailPath.js` are built from an actual Overpass/OSM
+export of the Fort Hill Loop Trail, Fort Hill Stairs, and the connecting
+walkway (not the prototype's hand-drawn placeholders anymore). Coordinates
+are meters, projected (equirectangular, screen/SVG y-down) from real lat/lon,
+centered on the Rocky River Nature Center.
+
+Confidence varies per waypoint — see the `note` field on each in
+`waypoints.js`. In short: `walkway`, `stairs`, and `overlook` are anchored to
+real, confirmed positions; `northrim` is objectively data-derived (the loop's
+max-latitude point); `earthwork` and `ridge` are **not** derivable from OSM
+(the earthworks is a National Register site, deliberately unmapped; "ridge"
+isn't a taggable feature) and are placed heuristically — treat those two as
+provisional until confirmed on the ground or via a field-recorded GPX walk.
+
+One thing this process surfaced: the recorded "Fort Hill Stairs (base)" GPS
+coordinate in CLAUDE.md sits ~52m from the real OSM base node — almost
+certainly the canopy/cliff GPS-reflection drift CLAUDE.md itself warns about.
+The OSM-confirmed node is used instead.
+
+`mockPositionSource.js` now walks `trailPath.js` there-and-back (bouncing at
+each end) rather than wrapping to the start, since the real walk is down the
+same stairs and back through the same walkway, not a closed loop.
 
 ## Git LFS
 
