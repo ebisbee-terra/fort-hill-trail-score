@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAudioEngine } from "./audio/useAudioEngine.js";
 import { usePositionEngine, OVERLAP_FACTOR } from "./position/usePositionEngine.js";
 import { STEMS } from "./audio/stemManifest.js";
@@ -108,6 +108,92 @@ const toLine = (pts) =>
   pts.reduce((d, [x, y], i) => d + (i ? ` L ${x} ${y}` : `M ${x} ${y}`), "");
 const toArea = (pts) => toLine(pts) + " Z";
 
+const STEM_COLORS = ["#C2452D", "#4A6FA5", "#E0A02B", "#3F7A6B", "#8A5A8C", "#2F7D8C", "#B4633A"];
+
+// Artwork is a stripe per stem, width proportional to gain -- CLAUDE.md is
+// explicit this is not a single "now playing" track, so there's no single
+// track image, just the blend itself made visible.
+function Artwork({ stack, size }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: 8, overflow: "hidden", display: "flex",
+      flexShrink: 0, background: "#2A3B33" }}>
+      {stack.map((s) => (
+        <div key={s.key} style={{ flex: Math.max(s.level, 0.001), background: s.color,
+          transition: "flex 1s linear" }} />
+      ))}
+    </div>
+  );
+}
+
+function LayerList({ stack }) {
+  return (
+    <div>
+      {stack.map((s) => (
+        <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0" }}>
+          <span style={{ width: 4, height: 12, background: s.color, flexShrink: 0 }} />
+          <span style={{ ...label, fontSize: 9, color: CONTOUR, flex: 1, minWidth: 0,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</span>
+          <span style={{ width: 44, height: 3, background: "#2A3B33", flexShrink: 0 }}>
+            <span style={{ display: "block", height: "100%", width: `${s.level * 100}%`,
+              background: s.color, transition: "width 1s linear" }} />
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// What CLAUDE.md calls "the primary interface during the walk" -- the phone
+// is in a pocket, screen off, and this lock-screen media card is what
+// someone actually sees if they glance at it. Never a single "now playing"
+// track: every audible layer, with its level, always.
+function LockScreenPreview({ stack, weatherIcon, daypartIcon }) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const time = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const date = now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+
+  return (
+    <div style={{ background: "#0C120F", border: `8px solid ${INK}`, borderRadius: 28,
+      padding: "26px 16px 20px", height: "100%", minHeight: 420, boxSizing: "border-box",
+      display: "flex", flexDirection: "column", justifyContent: "space-between",
+      boxShadow: "0 18px 40px rgba(0,0,0,.5)" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontFamily: "Georgia, serif", fontSize: 46, color: PAPER, opacity: 0.92,
+          lineHeight: 1 }}>{time}</div>
+        <div style={{ ...label, color: CONTOUR, opacity: 0.55, marginTop: 6 }}>{date}</div>
+      </div>
+
+      <div style={{ background: "rgba(255,255,255,.07)", borderRadius: 16, padding: 14 }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <Artwork stack={stack} size={50} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 15, color: PAPER }}>Fort Hill Loop</div>
+            <div style={{ ...label, fontSize: 9, color: CONTOUR, marginTop: 4 }}>Elijah Bisbee</div>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <ConditionIcon kind={weatherIcon} color={CONTOUR} dim={0.85} />
+            <ConditionIcon kind={daypartIcon} color={CONTOUR} dim={0.85} />
+          </div>
+        </div>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,.09)", marginTop: 11, paddingTop: 7 }}>
+          {stack.length > 0 ? (
+            <LayerList stack={stack} />
+          ) : (
+            <div style={{ ...label, fontSize: 9, color: CONTOUR, opacity: 0.5, padding: "4px 0" }}>
+              no audible layers yet
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Selector({ name, options, current, onPick }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -167,7 +253,8 @@ function ZoomButton({ children, onClick, disabled }) {
 function TrailMap({ path, waypoints, gains, position }) {
   // zoom: 0 = tightest follow (centered on the walker), 1 = whole trail
   // (centered on the trail itself) -- the farthest out the user can go.
-  const [zoom, setZoom] = useState(0);
+  // Starts 2 clicks out from the tightest zoom rather than fully zoomed in.
+  const [zoom, setZoom] = useState(2 * ZOOM_STEP);
 
   const bounds = useMemo(() => pathBounds(path), [path]);
   const fullHeight = Math.max(bounds.height, bounds.width / CAMERA_ASPECT) + MAP_PADDING_M * 2;
@@ -180,10 +267,10 @@ function TrailMap({ path, waypoints, gains, position }) {
   const viewY = centerY - height / 2;
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <svg
         viewBox={`${viewX} ${viewY} ${width} ${height}`}
-        style={{ width: "100%", height: 320, background: PAPER, borderRadius: 8, display: "block" }}
+        style={{ width: "100%", height: "100%", background: PAPER, borderRadius: 8, display: "block" }}
       >
         {WOOD_POLYGONS.map((poly, i) => (
           <path key={i} d={toArea(poly)} fill={WOOD} opacity=".35" stroke="none" />
@@ -238,6 +325,62 @@ function TrailMap({ path, waypoints, gains, position }) {
   );
 }
 
+// A realistic-proportioned phone frame taking over the viewport, so what's
+// inside can actually be judged as "what this looks like on a phone" rather
+// than as one narrow column among dev controls.
+function PhonePreview({ children, onExit }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(6,10,8,.96)",
+        zIndex: 50,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <div
+        style={{
+          width: "min(390px, 90vw)",
+          height: "min(844px, 85vh)",
+          background: RIG,
+          border: `10px solid ${INK}`,
+          borderRadius: 40,
+          overflow: "hidden",
+          boxShadow: "0 30px 80px rgba(0,0,0,.6)",
+          display: "flex",
+          flexDirection: "column",
+          padding: 10,
+        }}
+      >
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          {children}
+        </div>
+      </div>
+      <button
+        onClick={onExit}
+        style={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          ...label,
+          background: "transparent",
+          color: PAPER,
+          border: `1px solid ${CONTOUR}`,
+          borderRadius: 4,
+          padding: "8px 14px",
+          cursor: "pointer",
+        }}
+      >
+        exit full screen
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const { status, error, boot, shutdown, setGain } = useAudioEngine();
   const {
@@ -262,6 +405,17 @@ export default function App() {
   const [weather, setWeather] = useState("clear");
   const [daypart, setDaypart] = useState("midday");
 
+  const [showLockScreen, setShowLockScreen] = useState(false);
+  const [showFullscreen, setShowFullscreen] = useState(false);
+  const stack = STEMS.map((s, i) => ({
+    key: s.id,
+    name: s.label,
+    color: STEM_COLORS[i % STEM_COLORS.length],
+    level: s.id === "still" ? (stillnessActive ? 1 : 0) : gains[s.id] ?? 0,
+  }))
+    .filter((s) => s.level > 0.08)
+    .sort((a, b) => b.level - a.level);
+
   return (
     <div style={{ background: RIG, minHeight: "100vh", color: PAPER, padding: "24px 20px" }}>
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
@@ -283,6 +437,9 @@ export default function App() {
           </TransportButton>
           <TransportButton onClick={() => setSpeed((s) => (s === 1 ? 4 : s === 4 ? 10 : 1))}>
             {speed}×
+          </TransportButton>
+          <TransportButton onClick={() => setShowLockScreen((v) => !v)} active={showLockScreen}>
+            {showLockScreen ? "show map" : "preview lock screen"}
           </TransportButton>
         </div>
 
@@ -322,11 +479,35 @@ export default function App() {
           </button>
         </div>
 
-        <TrailMap path={path} waypoints={WAYPOINTS} gains={gains} position={position} />
+        <div style={{ height: 320 }}>
+          {showLockScreen ? (
+            <LockScreenPreview stack={stack} weatherIcon={weather} daypartIcon={daypart} />
+          ) : (
+            <TrailMap path={path} waypoints={WAYPOINTS} gains={gains} position={position} />
+          )}
+        </div>
+
+        <div style={{ marginTop: 8 }}>
+          <TransportButton onClick={() => setShowFullscreen(true)}>full screen preview</TransportButton>
+        </div>
+
+        {showFullscreen && (
+          <PhonePreview onExit={() => setShowFullscreen(false)}>
+            {showLockScreen ? (
+              <LockScreenPreview stack={stack} weatherIcon={weather} daypartIcon={daypart} />
+            ) : (
+              <TrailMap path={path} waypoints={WAYPOINTS} gains={gains} position={position} />
+            )}
+          </PhonePreview>
+        )}
 
         <div style={{ marginTop: 16 }}>
           {STEMS.map((s) => (
-            <GainRow key={s.id} stemLabel={s.label} level={gains[s.id] ?? 0} />
+            <GainRow
+              key={s.id}
+              stemLabel={s.label}
+              level={s.id === "still" ? (stillnessActive ? 1 : 0) : gains[s.id] ?? 0}
+            />
           ))}
         </div>
 

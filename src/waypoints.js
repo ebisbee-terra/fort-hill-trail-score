@@ -5,8 +5,10 @@
 // centered on the Rocky River Nature Center (41.4090491, -81.8840210, CLAUDE.md's
 // verified anchor). Source: an Overpass export of the actual Fort Hill Loop Trail,
 // Fort Hill Stairs, and connecting walkway, stitched and walked programmatically
-// (Nature Center -> walkway -> stairs -> connector -> Fort Hill Loop). See
-// src/trailPath.js for the full walked polyline these were derived from.
+// (Valley Parkway lot -> Woodland Loop Trail -> West Channel Pond Loop Trail
+// -> stairs -> connector -> Fort Hill Loop). See src/trailPath.js for the
+// full walked polyline these were derived from, and its header for a note
+// on a walkway-routing correction against a user-marked-up map screenshot.
 //
 // Confidence varies per waypoint — see `note` on each:
 //   - walkway, stairs: anchored to verified/real coordinates.
@@ -31,8 +33,8 @@
 // 2-3 deep rather than bleeding across the whole trail.
 
 export const WAYPOINTS = [
-  { id: "walkway", name: "The Walkway", x: 0.0, y: -0.0, radius: 48.0,
-    note: "at Rocky River Nature Center (verified coord)" },
+  { id: "walkway", name: "The Walkway", x: 168.45, y: 44.99, radius: 150.0,
+    note: "moved closer to the Valley Parkway entrance, ~15% along the corrected walkway; radius widened since the gap to Stairs is a real ~250m here" },
   { id: "stairs", name: "Foot of the Stairs", x: -74.82, y: -28.31, radius: 37.0,
     note: "real OSM base-of-stairs node; ~52m from the recorded GPS reading, likely canopy/cliff drift" },
   { id: "overlook", name: "The Overlook", x: -134.86, y: -14.17, radius: 37.0,

@@ -59,20 +59,30 @@ The engine assumes every stem file:
 - is trimmed to a **whole number of bars**, with **no lead-in silence**, so
   `loop = true` on the `AudioBufferSourceNode` produces a clean seam
 
-**The first batch of real stems dropped into `public/audio/` (`arp-1.wav`,
-`bloom-sax-1.wav`, `inst-5.wav`, `stratus-piano-1.wav`,
-`string-raindrops.wav`) are raw DAW bounces and are *not* yet trimmed to a
+**The first batch of real stems (`bloom-sax-1.wav`, `inst-5.wav`,
+`stratus-piano-1.wav`, `string-raindrops.wav` — still in use; `arp-1.wav` was
+swapped out, see below) are raw DAW bounces and are *not* yet trimmed to a
 bar-exact loop length** — durations don't land on a whole bar boundary at 110
 BPM. Expect an audible seam/click on loop until they're re-exported with a
 clean loop point. That's a content task, not an engine bug — the scheduling
 architecture (phase-locked start, bar-based gain ramps) doesn't care what's
 in the buffer.
 
-The `stemManifest.js` mapping of stem → waypoint is also a placeholder
-(filenames don't indicate which waypoint each belongs to) — swap `stemId`
-values once the real song structure is known. Adding more stems later is
-data-only: add the file to `public/audio/` and an entry to `stemManifest.js`
-— no code changes.
+**A second batch** (`opening-pad.wav`, `stillness.wav`, plus `bfs.wav`,
+`jasno.wav`, `staccato-vocals.wav`, `inst-5-alt.wav`,
+`string-raindrops-alt.wav`) is cleanly bar-trimmed — exactly 18 bars at
+110 BPM each, no seam expected. `opening-pad.wav` replaced `arp-1.wav` as the
+`walkway` stem, and `stillness.wav` is now the stillness-layer stem (see
+below). The other five are meant to become weather and/or time-of-day
+condition layers per the user, but the exact state-by-state assignment isn't
+decided yet, so they're staged in `public/audio/` but not wired into
+`stemManifest.js`.
+
+The remaining `stemManifest.js` mapping of stem → waypoint is still mostly a
+placeholder (filenames don't indicate which waypoint each belongs to) — swap
+`stemId` values once the rest of the actual song structure is known. Adding
+more stems is data-only: add the file to `public/audio/` and an entry to
+`stemManifest.js` — no code changes.
 
 ## Loop crossfade
 
@@ -119,6 +129,17 @@ The OSM-confirmed node is used instead.
 each end) rather than wrapping to the start, since the real walk is down the
 same stairs and back through the same walkway, not a closed loop.
 
+**The walkway leg was corrected** against a user-marked-up map screenshot of
+the intended route. The first version used a shortest-path search anchored
+at the Nature Center's own coordinate, which found a shorter unnamed footway
+instead of ever actually routing through "Woodland Loop Trail" — even though
+CLAUDE.md names it explicitly. The corrected version starts from the Valley
+Parkway lot's own service-road access point instead, and does genuinely pass
+through both Woodland Loop Trail and West Channel Pond Loop Trail. The
+`walkway` waypoint itself was also moved closer to the entrance (and given a
+much bigger radius, since the real gap to `stairs` here is ~250m) — it used
+to sit right next to the Nature Center.
+
 ## Stillness layer
 
 Per CLAUDE.md: stop moving for ~3s and an extra stem opens, gated behind
@@ -130,11 +151,14 @@ has stayed within a small radius for the full 3s (comparing against a single
 per-tick delta would misread ordinary walking as "still," since even normal
 walking speed only moves ~7cm per 50ms tick).
 
-There's no real "still" stem file yet, so `STILL_STEM_ID` in
-`usePositionEngine.js` has no matching entry in `stemManifest.js` —
-`AudioEngine.setGain` no-ops for unknown stem ids, so the whole mechanism is
-already wired and will "just work" the moment a real stem is added, the same
-extensibility pattern as the `ridge`/`return` waypoints.
+`stillness.wav` is now wired in as the `still` stem (`STILL_STEM_ID` in
+`usePositionEngine.js`), so this plays for real once audio is started. One
+real bug turned up wiring this in: the dev harness's gain-bar row for
+`still` read from the `gains` object, which is only ever populated with
+*waypoint* gains — since stillness isn't a waypoint, that key never existed
+and the row silently showed 0.00 regardless of actual state. `App.jsx` now
+special-cases `still` to read `stillnessActive` directly for both the gain
+row and the lock-screen layer stack.
 
 The dev harness shows the current visit number and a "reset visits" button
 (for testing both the locked and unlocked states without waiting for actual
@@ -155,6 +179,28 @@ yet driven by a real weather fetch or a solar-altitude calculation from
 actual time/location, and not yet wired to the audio engine (no weather stem
 or daypart filter/reverb chain exists yet).
 
+## Lock screen preview
+
+CLAUDE.md calls the lock-screen media card "the primary interface during the
+walk" — the phone is in a pocket, screen off, and this card is what someone
+actually sees if they glance at it. The "preview lock screen" toggle in the
+dev harness swaps the map for a mockup of it: current time/date, trail name
+and artist, active weather/daypart icons, and — critically, per CLAUDE.md —
+**every audible layer with its level**, never a single "now playing" track.
+Artwork is a stripe per stem, width proportional to gain, exactly as
+specified. `Artwork`/`LayerList` in `App.jsx` build this from the same
+`gains` data the map already uses.
+
+## Full screen preview
+
+"full screen preview" opens whichever of the map or lock screen is currently
+selected inside a realistic phone-proportioned frame that takes over the
+viewport (`PhonePreview` in `App.jsx`), so it can actually be judged as "what
+this looks like on a phone" rather than as one narrow column next to dev
+controls. Not the browser's real Fullscreen API — just a fixed-position
+overlay sized like one, which is simpler and doesn't need a permission
+prompt.
+
 ## Dev harness map
 
 `basemap.js` holds real surrounding context from the same OSM export —
@@ -170,7 +216,8 @@ centered on the walker (`MIN_CAMERA_HEIGHT_M` in `App.jsx`); fully zoomed
 out shows the whole trail, centered on the trail itself, and is as far as
 the user can go — it can't zoom out past that. Intermediate zoom levels
 linearly blend both the window size and the center point between those two
-states.
+states. Starts 2 clicks out from the tightest zoom rather than fully zoomed
+in.
 
 ## Git LFS
 

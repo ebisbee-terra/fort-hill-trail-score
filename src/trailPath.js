@@ -1,19 +1,42 @@
-// The real one-way trail: Rocky River Nature Center -> walkway -> Fort Hill
-// Stairs -> connector -> Fort Hill Loop Trail, walked node-by-node from an
-// Overpass export of the actual OSM ways (see waypoints.js for the full
-// provenance notes). Coordinates are meters, same projection as waypoints.js
-// (x=east, y=south/screen-down, centered on the Nature Center).
+// The real one-way trail: Valley Parkway lot -> Woodland Loop Trail past the
+// Nature Center -> West Channel Pond Loop Trail -> Fort Hill Stairs ->
+// connector -> Fort Hill Loop Trail, walked node-by-node from an Overpass
+// export of the actual OSM ways (see waypoints.js for the full provenance
+// notes). Coordinates are meters, same projection as waypoints.js (x=east,
+// y=south/screen-down, centered on the Nature Center).
+//
+// The walkway leg was corrected against a user-marked-up map screenshot of
+// the intended route — the first version of this file used a shortest-path
+// search anchored at the Nature Center's own coordinate, which found a
+// shorter unnamed footway instead of ever actually using Woodland Loop
+// Trail, even though CLAUDE.md names it explicitly. This version starts
+// from the Valley Parkway lot's own service-road access point instead.
 //
 // This is the one-way trip only. The return trip retraces the same points in
 // reverse, which the mock position source and real GPS position both already
 // handle naturally since gain is purely a function of distance to a waypoint,
 // not of direction of travel.
 export const TRAIL_PATH = [
-  [10.09,-2.85],
-  [15.26,-3.3],
-  [22.08,-6.48],
-  [26.55,-7.88],
-  [32.42,-12.81],
+  [209.35,78.31],
+  [205.46,75.23],
+  [195.98,67.68],
+  [178.33,53.65],
+  [168.45,44.99],
+  [160.6,34.92],
+  [156.0,25.81],
+  [152.87,14.4],
+  [151.12,0.85],
+  [150.64,-6.18],
+  [152.02,-11.95],
+  [152.87,-15.58],
+  [136.64,-16.71],
+  [124.02,-17.59],
+  [99.86,-18.04],
+  [71.23,-17.37],
+  [57.8,-16.4],
+  [52.67,-16.02],
+  [48.17,-15.31],
+  [46.65,-15.16],
   [34.43,-13.13],
   [23.89,-19.18],
   [14.29,-22.44],
