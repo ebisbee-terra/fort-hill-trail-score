@@ -117,6 +117,17 @@ The OSM-confirmed node is used instead.
 each end) rather than wrapping to the start, since the real walk is down the
 same stairs and back through the same walkway, not a closed loop.
 
+## Dev harness map
+
+`basemap.js` holds real surrounding context from the same OSM export —
+Rocky River, nearby water/forest cover, and the other trails in the
+area — rendered as background layers under the main route (purely visual,
+none of it feeds gain calculation; large features that extend well beyond
+the trail are clipped rather than stretched across kilometers of
+irrelevant geometry). The map camera follows the walker: a fixed-size
+window (`CAMERA_HEIGHT_M`/`CAMERA_ASPECT` in `App.jsx`) centered on the
+current position, rather than a static full-trail overview.
+
 ## Git LFS
 
 Stem audio is tracked through [Git LFS](https://git-lfs.com) (see

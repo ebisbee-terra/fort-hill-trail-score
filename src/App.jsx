@@ -2,11 +2,20 @@ import { useAudioEngine } from "./audio/useAudioEngine.js";
 import { usePositionEngine, OVERLAP_FACTOR } from "./position/usePositionEngine.js";
 import { STEMS } from "./audio/stemManifest.js";
 import { WAYPOINTS } from "./waypoints.js";
+import { CONTEXT_TRAILS, RIVER, WATER_POLYGONS, WOOD_POLYGONS } from "./basemap.js";
 
 const PAPER = "#EDEBE0";
 const INK = "#1B2A23";
 const CONTOUR = "#B9A87E";
+const WATER = "#6E9AA8";
+const WOOD = "#A9BB93";
 const RIG = "#16211C";
+
+// How much of the real trail the map window shows around the walker, in
+// meters, matching the map's rendered aspect ratio (container is ~560x320).
+const CAMERA_HEIGHT_M = 260;
+const CAMERA_ASPECT = 560 / 320;
+const CAMERA_WIDTH_M = CAMERA_HEIGHT_M * CAMERA_ASPECT;
 
 const label = {
   fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
@@ -62,24 +71,36 @@ function GainRow({ stemLabel, level }) {
   );
 }
 
-function TrailMap({ path, waypoints, gains, position }) {
-  const xs = path.map((p) => p[0]);
-  const ys = path.map((p) => p[1]);
-  const pad = 60;
-  const minX = Math.min(...xs) - pad;
-  const maxX = Math.max(...xs) + pad;
-  const minY = Math.min(...ys) - pad;
-  const maxY = Math.max(...ys) + pad;
+const toLine = (pts) =>
+  pts.reduce((d, [x, y], i) => d + (i ? ` L ${x} ${y}` : `M ${x} ${y}`), "");
+const toArea = (pts) => toLine(pts) + " Z";
 
-  const toPath = (pts) =>
-    pts.reduce((d, [x, y], i) => d + (i ? ` L ${x} ${y}` : `M ${x} ${y}`), "");
+function TrailMap({ path, waypoints, gains, position }) {
+  // Camera follows the walker: a fixed-size window centered on the current
+  // (already-smoothed) position, rather than a static full-trail overview.
+  const viewX = position.x - CAMERA_WIDTH_M / 2;
+  const viewY = position.y - CAMERA_HEIGHT_M / 2;
 
   return (
     <svg
-      viewBox={`${minX} ${minY} ${maxX - minX} ${maxY - minY}`}
-      style={{ width: "100%", height: 320, background: "#0f1712", borderRadius: 8 }}
+      viewBox={`${viewX} ${viewY} ${CAMERA_WIDTH_M} ${CAMERA_HEIGHT_M}`}
+      style={{ width: "100%", height: 320, background: PAPER, borderRadius: 8 }}
     >
-      <path d={toPath(path)} stroke={CONTOUR} strokeWidth="2" fill="none" opacity=".5" />
+      {WOOD_POLYGONS.map((poly, i) => (
+        <path key={i} d={toArea(poly)} fill={WOOD} opacity=".35" stroke="none" />
+      ))}
+      {WATER_POLYGONS.map((poly, i) => (
+        <path key={i} d={toArea(poly)} fill={WATER} opacity=".3" stroke="none" />
+      ))}
+      {RIVER.map((seg, i) => (
+        <path key={i} d={toLine(seg)} stroke={WATER} strokeWidth="5" fill="none" opacity=".5" />
+      ))}
+      {CONTEXT_TRAILS.map((seg, i) => (
+        <path key={i} d={toLine(seg)} stroke={INK} strokeWidth="1" strokeDasharray="1 4"
+          fill="none" opacity=".3" />
+      ))}
+
+      <path d={toLine(path)} stroke={INK} strokeWidth="3" fill="none" opacity=".8" />
       {waypoints.map((w) => (
         <g key={w.id}>
           <circle
@@ -89,21 +110,21 @@ function TrailMap({ path, waypoints, gains, position }) {
             fill="none"
             stroke={CONTOUR}
             strokeDasharray="3 5"
-            opacity={0.2 + (gains[w.id] ?? 0) * 0.4}
+            opacity={0.3 + (gains[w.id] ?? 0) * 0.4}
           />
           <circle
             cx={w.x}
             cy={w.y}
-            r={10}
-            fill={PAPER}
-            opacity={0.3 + (gains[w.id] ?? 0) * 0.7}
+            r={7}
+            fill={INK}
+            opacity={0.4 + (gains[w.id] ?? 0) * 0.6}
           />
-          <text x={w.x + 14} y={w.y + 4} fill={PAPER} style={{ ...label, fontSize: 9 }}>
+          <text x={w.x + 11} y={w.y + 4} fill={INK} style={{ ...label, fontSize: 9 }} opacity=".75">
             {w.name}
           </text>
         </g>
       ))}
-      <circle cx={position.x} cy={position.y} r="7" fill="#C2452D" stroke={PAPER} strokeWidth="2" />
+      <circle cx={position.x} cy={position.y} r="6" fill="#C2452D" stroke={PAPER} strokeWidth="2" />
     </svg>
   );
 }
