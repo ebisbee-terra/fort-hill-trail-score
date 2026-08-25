@@ -13,6 +13,12 @@
 export const TEMPO = 110;
 export const BEATS_PER_BAR = 4;
 
+// How much overlap AudioEngine crossfades at each stem's own loop point, to
+// mask a seam on files that aren't trimmed to an exact bar length (see note
+// above). Independent of the waypoint gain ramps — this masks a click, it
+// doesn't fix phase drift from an inexact loop length.
+export const LOOP_CROSSFADE_BARS = 1 / 8;
+
 export const STEMS = [
   { id: "walkway", url: "/audio/arp-1.wav", label: "Arp 1" },
   { id: "stairs", url: "/audio/bloom-sax-1.wav", label: "Bloom Sax - Stem 1" },

@@ -20,8 +20,9 @@ src/
   audio/
     AudioEngine.js        # framework-agnostic Web Audio core — load/start/setGain/dispose
     useAudioEngine.js     # React lifecycle wrapper
-    stemManifest.js       # tempo, beats/bar, and the stem id → file mapping
+    stemManifest.js       # tempo, beats/bar, stem id → file mapping, loop crossfade length
     barMath.js            # bars ↔ seconds conversion
+    loopCurves.js         # equal-power fade-in/out curves for the loop crossfade
   position/
     mockPositionSource.js # stands in for GPS — walks a point along a path
     smoothing.js           # EMA smoothing on raw position (CLAUDE.md layer 1)
@@ -69,6 +70,27 @@ The `stemManifest.js` mapping of stem → waypoint is also a placeholder
 values once the real song structure is known. Adding more stems later is
 data-only: add the file to `public/audio/` and an entry to `stemManifest.js`
 — no code changes.
+
+## Loop crossfade
+
+Since bar-exact loop trimming is a content task that hasn't happened yet (see
+above), `AudioEngine` masks the seam itself: each stem loops via a chain of
+overlapping one-shot voices rather than native `loop = true`, crossfading the
+tail of one voice into the head of the next with an equal-power curve
+(`loopCurves.js`). The overlap length is `LOOP_CROSSFADE_BARS` in
+`stemManifest.js` (default 1/8 bar). This hides the click — it does **not**
+fix phase drift from a loop length that isn't an exact bar count, which is
+still worth fixing at the source for final content.
+
+## Waypoint overlap
+
+`OVERLAP_FACTOR` in `usePositionEngine.js` widens every waypoint's effective
+falloff radius beyond its authored value, so neighboring waypoints' zones
+overlap more and a walker spends longer inside 2-3 blended layers instead of
+passing through one stem at a time (CLAUDE.md's target). It's a multiplier
+applied at gain-calculation time, not a change to the radius values
+themselves — tune it there. It'll need revisiting once real GPS-derived
+waypoint spacing (in meters) replaces the current placeholder coordinates.
 
 ## Git LFS
 

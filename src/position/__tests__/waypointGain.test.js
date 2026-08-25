@@ -24,6 +24,12 @@ describe("gainForDistance", () => {
     expect(near).toBeGreaterThan(mid);
     expect(mid).toBeGreaterThan(far);
   });
+
+  it("widens the effective falloff without changing the authored radius", () => {
+    // just past the base radius: silent at factor 1, but audible once widened
+    expect(gainForDistance(110, 100, 1)).toBe(0);
+    expect(gainForDistance(110, 100, 1.5)).toBeGreaterThan(0);
+  });
 });
 
 describe("computeGains", () => {
@@ -35,5 +41,13 @@ describe("computeGains", () => {
     const gains = computeGains({ x: 0, y: 0 }, waypoints);
     expect(gains.a).toBe(1);
     expect(gains.b).toBe(0);
+  });
+
+  it("applies overlapFactor to every waypoint", () => {
+    const waypoints = [{ id: "a", x: 0, y: 0, radius: 100 }];
+    const base = computeGains({ x: 120, y: 0 }, waypoints);
+    const widened = computeGains({ x: 120, y: 0 }, waypoints, 1.5);
+    expect(base.a).toBe(0);
+    expect(widened.a).toBeGreaterThan(0);
   });
 });

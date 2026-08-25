@@ -1,5 +1,5 @@
 import { useAudioEngine } from "./audio/useAudioEngine.js";
-import { usePositionEngine } from "./position/usePositionEngine.js";
+import { usePositionEngine, OVERLAP_FACTOR } from "./position/usePositionEngine.js";
 import { STEMS } from "./audio/stemManifest.js";
 import { WAYPOINTS } from "./waypoints.js";
 
@@ -85,7 +85,7 @@ function TrailMap({ path, waypoints, gains, position }) {
           <circle
             cx={w.x}
             cy={w.y}
-            r={w.radius}
+            r={w.radius * OVERLAP_FACTOR}
             fill="none"
             stroke={CONTOUR}
             strokeDasharray="3 5"

@@ -11,14 +11,21 @@ export function distance(ax, ay, bx, by) {
 }
 
 // Smoothstep falloff on distance from a waypoint, no hard radius edge.
-export function gainForDistance(d, radius) {
-  return smoothstep(clamp(1 - d / radius, 0, 1));
+// overlapFactor widens (>1) or narrows (<1) the effective radius used for
+// falloff without changing the authored radius itself — the knob for how
+// long someone spends inside overlapping layers versus a single stem.
+export function gainForDistance(d, radius, overlapFactor = 1) {
+  return smoothstep(clamp(1 - d / (radius * overlapFactor), 0, 1));
 }
 
-export function computeGains(position, waypoints) {
+export function computeGains(position, waypoints, overlapFactor = 1) {
   const gains = {};
   for (const w of waypoints) {
-    gains[w.id] = gainForDistance(distance(position.x, position.y, w.x, w.y), w.radius);
+    gains[w.id] = gainForDistance(
+      distance(position.x, position.y, w.x, w.y),
+      w.radius,
+      overlapFactor
+    );
   }
   return gains;
 }

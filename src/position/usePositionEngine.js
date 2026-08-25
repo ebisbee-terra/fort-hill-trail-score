@@ -10,6 +10,14 @@ const SMOOTH_ALPHA = 0.13;
 const GAIN_RAMP_BARS = 1;
 const START_POINT = [392, 640];
 
+// Widens each waypoint's effective falloff radius beyond its authored value,
+// so neighboring waypoints' zones overlap more and someone spends longer
+// inside 2-3 blended layers instead of passing through a single stem at a
+// time. Tuned against the prototype's placeholder scene-unit coordinates —
+// revisit once real GPS-derived spacing (in meters) replaces them, per
+// CLAUDE.md's 80m-minimum / 150-200m-typical waypoint spacing.
+export const OVERLAP_FACTOR = 1.5;
+
 const PATH = [START_POINT, ...WAYPOINTS.map((w) => [w.x, w.y])];
 
 // Ties the mocked position source to smoothing, waypoint gain calculation,
@@ -54,7 +62,7 @@ export function usePositionEngine({ setGain } = {}) {
         : source.getCurrent();
 
       const smoothed = smootherRef.current(truePos);
-      const nextGains = computeGains(smoothed, WAYPOINTS);
+      const nextGains = computeGains(smoothed, WAYPOINTS, OVERLAP_FACTOR);
       const arrivals = trackerRef.current.update(nextGains);
 
       setPosition(smoothed);

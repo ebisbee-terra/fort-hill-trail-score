@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioEngine } from "./AudioEngine.js";
-import { STEMS, TEMPO, BEATS_PER_BAR } from "./stemManifest.js";
+import { STEMS, TEMPO, BEATS_PER_BAR, LOOP_CROSSFADE_BARS } from "./stemManifest.js";
 
 // React lifecycle wrapper around AudioEngine. The engine itself is created
 // lazily on first `boot()` call, which must happen inside a user gesture
@@ -16,7 +16,12 @@ export function useAudioEngine() {
     setError(null);
     const engine = new AudioEngine();
     try {
-      await engine.load({ tempo: TEMPO, beatsPerBar: BEATS_PER_BAR, stems: STEMS });
+      await engine.load({
+        tempo: TEMPO,
+        beatsPerBar: BEATS_PER_BAR,
+        stems: STEMS,
+        loopCrossfadeBars: LOOP_CROSSFADE_BARS,
+      });
       engine.start();
       engineRef.current = engine;
       setStatus("running");
