@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useAudioEngine } from "./audio/useAudioEngine.js";
 import { usePositionEngine, OVERLAP_FACTOR } from "./position/usePositionEngine.js";
 import { STEMS } from "./audio/stemManifest.js";
@@ -11,11 +12,29 @@ const WATER = "#6E9AA8";
 const WOOD = "#A9BB93";
 const RIG = "#16211C";
 
-// How much of the real trail the map window shows around the walker, in
-// meters, matching the map's rendered aspect ratio (container is ~560x320).
-const CAMERA_HEIGHT_M = 260;
+// Camera zoom range, in meters of window height, matching the map's
+// rendered aspect ratio (container is ~560x320). zoom=0 is the tightest
+// follow (centered on the walker); zoom=1 shows the whole trail (centered
+// on the trail itself) and is as far out as the user can go.
 const CAMERA_ASPECT = 560 / 320;
-const CAMERA_WIDTH_M = CAMERA_HEIGHT_M * CAMERA_ASPECT;
+const MIN_CAMERA_HEIGHT_M = 100;
+const ZOOM_STEP = 0.2;
+const MAP_PADDING_M = 40;
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function pathBounds(path) {
+  const xs = path.map((p) => p[0]);
+  const ys = path.map((p) => p[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  return { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY,
+    centerX: (minX + maxX) / 2, centerY: (minY + maxY) / 2 };
+}
 
 const label = {
   fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
@@ -75,57 +94,104 @@ const toLine = (pts) =>
   pts.reduce((d, [x, y], i) => d + (i ? ` L ${x} ${y}` : `M ${x} ${y}`), "");
 const toArea = (pts) => toLine(pts) + " Z";
 
+function ZoomButton({ children, onClick, disabled }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        ...label,
+        width: 26,
+        height: 26,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(237,235,224,.92)",
+        color: INK,
+        border: `1px solid ${CONTOUR}`,
+        borderRadius: 4,
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        fontSize: 14,
+        lineHeight: 1,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 function TrailMap({ path, waypoints, gains, position }) {
-  // Camera follows the walker: a fixed-size window centered on the current
-  // (already-smoothed) position, rather than a static full-trail overview.
-  const viewX = position.x - CAMERA_WIDTH_M / 2;
-  const viewY = position.y - CAMERA_HEIGHT_M / 2;
+  // zoom: 0 = tightest follow (centered on the walker), 1 = whole trail
+  // (centered on the trail itself) -- the farthest out the user can go.
+  const [zoom, setZoom] = useState(0);
+
+  const bounds = useMemo(() => pathBounds(path), [path]);
+  const fullHeight = Math.max(bounds.height, bounds.width / CAMERA_ASPECT) + MAP_PADDING_M * 2;
+
+  const height = lerp(MIN_CAMERA_HEIGHT_M, fullHeight, zoom);
+  const width = height * CAMERA_ASPECT;
+  const centerX = lerp(position.x, bounds.centerX, zoom);
+  const centerY = lerp(position.y, bounds.centerY, zoom);
+  const viewX = centerX - width / 2;
+  const viewY = centerY - height / 2;
 
   return (
-    <svg
-      viewBox={`${viewX} ${viewY} ${CAMERA_WIDTH_M} ${CAMERA_HEIGHT_M}`}
-      style={{ width: "100%", height: 320, background: PAPER, borderRadius: 8 }}
-    >
-      {WOOD_POLYGONS.map((poly, i) => (
-        <path key={i} d={toArea(poly)} fill={WOOD} opacity=".35" stroke="none" />
-      ))}
-      {WATER_POLYGONS.map((poly, i) => (
-        <path key={i} d={toArea(poly)} fill={WATER} opacity=".3" stroke="none" />
-      ))}
-      {RIVER.map((seg, i) => (
-        <path key={i} d={toLine(seg)} stroke={WATER} strokeWidth="5" fill="none" opacity=".5" />
-      ))}
-      {CONTEXT_TRAILS.map((seg, i) => (
-        <path key={i} d={toLine(seg)} stroke={INK} strokeWidth="1" strokeDasharray="1 4"
-          fill="none" opacity=".3" />
-      ))}
+    <div style={{ position: "relative" }}>
+      <svg
+        viewBox={`${viewX} ${viewY} ${width} ${height}`}
+        style={{ width: "100%", height: 320, background: PAPER, borderRadius: 8, display: "block" }}
+      >
+        {WOOD_POLYGONS.map((poly, i) => (
+          <path key={i} d={toArea(poly)} fill={WOOD} opacity=".35" stroke="none" />
+        ))}
+        {WATER_POLYGONS.map((poly, i) => (
+          <path key={i} d={toArea(poly)} fill={WATER} opacity=".3" stroke="none" />
+        ))}
+        {RIVER.map((seg, i) => (
+          <path key={i} d={toLine(seg)} stroke={WATER} strokeWidth="5" fill="none" opacity=".5" />
+        ))}
+        {CONTEXT_TRAILS.map((seg, i) => (
+          <path key={i} d={toLine(seg)} stroke={INK} strokeWidth="1" strokeDasharray="1 4"
+            fill="none" opacity=".3" />
+        ))}
 
-      <path d={toLine(path)} stroke={INK} strokeWidth="3" fill="none" opacity=".8" />
-      {waypoints.map((w) => (
-        <g key={w.id}>
-          <circle
-            cx={w.x}
-            cy={w.y}
-            r={w.radius * OVERLAP_FACTOR}
-            fill="none"
-            stroke={CONTOUR}
-            strokeDasharray="3 5"
-            opacity={0.3 + (gains[w.id] ?? 0) * 0.4}
-          />
-          <circle
-            cx={w.x}
-            cy={w.y}
-            r={7}
-            fill={INK}
-            opacity={0.4 + (gains[w.id] ?? 0) * 0.6}
-          />
-          <text x={w.x + 11} y={w.y + 4} fill={INK} style={{ ...label, fontSize: 9 }} opacity=".75">
-            {w.name}
-          </text>
-        </g>
-      ))}
-      <circle cx={position.x} cy={position.y} r="6" fill="#C2452D" stroke={PAPER} strokeWidth="2" />
-    </svg>
+        <path d={toLine(path)} stroke={INK} strokeWidth="3" fill="none" opacity=".8" />
+        {waypoints.map((w) => (
+          <g key={w.id}>
+            <circle
+              cx={w.x}
+              cy={w.y}
+              r={w.radius * OVERLAP_FACTOR}
+              fill="none"
+              stroke={CONTOUR}
+              strokeDasharray="3 5"
+              opacity={0.3 + (gains[w.id] ?? 0) * 0.4}
+            />
+            <circle
+              cx={w.x}
+              cy={w.y}
+              r={7}
+              fill={INK}
+              opacity={0.4 + (gains[w.id] ?? 0) * 0.6}
+            />
+            <text x={w.x + 11} y={w.y + 4} fill={INK} style={{ ...label, fontSize: 9 }} opacity=".75">
+              {w.name}
+            </text>
+          </g>
+        ))}
+        <circle cx={position.x} cy={position.y} r="6" fill="#C2452D" stroke={PAPER} strokeWidth="2" />
+      </svg>
+
+      <div style={{ position: "absolute", right: 10, bottom: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+        <ZoomButton onClick={() => setZoom((z) => Math.max(0, z - ZOOM_STEP))} disabled={zoom <= 0}>
+          +
+        </ZoomButton>
+        <ZoomButton onClick={() => setZoom((z) => Math.min(1, z + ZOOM_STEP))} disabled={zoom >= 1}>
+          −
+        </ZoomButton>
+      </div>
+    </div>
   );
 }
 

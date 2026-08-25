@@ -124,9 +124,15 @@ Rocky River, nearby water/forest cover, and the other trails in the
 area — rendered as background layers under the main route (purely visual,
 none of it feeds gain calculation; large features that extend well beyond
 the trail are clipped rather than stretched across kilometers of
-irrelevant geometry). The map camera follows the walker: a fixed-size
-window (`CAMERA_HEIGHT_M`/`CAMERA_ASPECT` in `App.jsx`) centered on the
-current position, rather than a static full-trail overview.
+irrelevant geometry).
+
+The map camera follows the walker and is user-zoomable (+/- in the bottom
+corner) between two bounds: fully zoomed in is a tight follow window
+centered on the walker (`MIN_CAMERA_HEIGHT_M` in `App.jsx`); fully zoomed
+out shows the whole trail, centered on the trail itself, and is as far as
+the user can go — it can't zoom out past that. Intermediate zoom levels
+linearly blend both the window size and the center point between those two
+states.
 
 ## Git LFS
 
