@@ -14,14 +14,14 @@ const GAIN_RAMP_BARS = 1;
 const START_POINT = TRAIL_PATH[0];
 
 // CLAUDE.md: "stop moving for ~3s and an extra stem opens... unlocks on
-// visit 2+." STILL_STEM_ID has no corresponding file in stemManifest.js yet
-// (see README) -- AudioEngine.setGain no-ops for unknown stem ids, so wiring
-// this now is harmless and the layer will "just work" once a real stem is
-// added, same as the ridge/return waypoints.
+// visit 2+."
 const STILL_STEM_ID = "still";
 const STILL_AFTER_MS = 3000;
 const STILL_MOVE_THRESHOLD_M = 2;
-const STILL_RAMP_BARS = 2;
+// Slower than a waypoint gain ramp (GAIN_RAMP_BARS=1) -- this is a deliberate
+// "the piece settles" moment, not a continuous position-driven blend, so it
+// should open and close more gradually.
+const STILL_RAMP_BARS = 4;
 
 // Widens each waypoint's effective falloff radius beyond its authored value,
 // so neighboring waypoints' zones overlap more and someone spends longer

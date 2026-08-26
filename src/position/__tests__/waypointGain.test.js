@@ -30,6 +30,19 @@ describe("gainForDistance", () => {
     expect(gainForDistance(110, 100, 1)).toBe(0);
     expect(gainForDistance(110, 100, 1.5)).toBeGreaterThan(0);
   });
+
+  it("stays at full gain throughout the inner plateau, not just at the exact center", () => {
+    // default INNER_PLATEAU_FRACTION (0.45) * radius 100 = 45m plateau
+    expect(gainForDistance(0, 100)).toBe(1);
+    expect(gainForDistance(30, 100)).toBe(1);
+    expect(gainForDistance(45, 100)).toBe(1);
+    expect(gainForDistance(46, 100)).toBeLessThan(1);
+  });
+
+  it("plateau fraction is configurable", () => {
+    expect(gainForDistance(20, 100, 1, 0.1)).toBeLessThan(1); // 10% plateau = 10m, 20m is past it
+    expect(gainForDistance(20, 100, 1, 0.9)).toBe(1); // 90% plateau = 90m, 20m is well inside it
+  });
 });
 
 describe("computeGains", () => {

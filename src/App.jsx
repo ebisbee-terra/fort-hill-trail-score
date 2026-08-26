@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAudioEngine } from "./audio/useAudioEngine.js";
 import { usePositionEngine, OVERLAP_FACTOR } from "./position/usePositionEngine.js";
+import { INNER_PLATEAU_FRACTION } from "./position/waypointGain.js";
 import { STEMS } from "./audio/stemManifest.js";
 import { WAYPOINTS } from "./waypoints.js";
 import { CONTEXT_TRAILS, RIVER, WATER_POLYGONS, WOOD_POLYGONS } from "./basemap.js";
@@ -286,30 +287,51 @@ function TrailMap({ path, waypoints, gains, position }) {
             fill="none" opacity=".3" />
         ))}
 
+        {/* Colored reach zones, one per waypoint: outer = falloff edge (radius
+            * OVERLAP_FACTOR), inner = the full-gain plateau. Semi-opaque so
+            overlap between neighbors shows as a visibly darker blend, and any
+            gap with no waypoint reaching it shows as plain paper. Drawn under
+            the trail path/markers so those stay crisp on top. */}
+        {waypoints.map((w, i) => {
+          const color = STEM_COLORS[i % STEM_COLORS.length];
+          const outer = w.radius * OVERLAP_FACTOR;
+          const inner = outer * INNER_PLATEAU_FRACTION;
+          return (
+            <g key={w.id}>
+              <circle cx={w.x} cy={w.y} r={outer} fill={color} stroke="none" opacity=".16" />
+              <circle cx={w.x} cy={w.y} r={inner} fill={color} stroke="none" opacity=".28" />
+            </g>
+          );
+        })}
+
         <path d={toLine(path)} stroke={INK} strokeWidth="3" fill="none" opacity=".8" />
-        {waypoints.map((w) => (
-          <g key={w.id}>
-            <circle
-              cx={w.x}
-              cy={w.y}
-              r={w.radius * OVERLAP_FACTOR}
-              fill="none"
-              stroke={CONTOUR}
-              strokeDasharray="3 5"
-              opacity={0.3 + (gains[w.id] ?? 0) * 0.4}
-            />
-            <circle
-              cx={w.x}
-              cy={w.y}
-              r={7}
-              fill={INK}
-              opacity={0.4 + (gains[w.id] ?? 0) * 0.6}
-            />
-            <text x={w.x + 11} y={w.y + 4} fill={INK} style={{ ...label, fontSize: 9 }} opacity=".75">
-              {w.name}
-            </text>
-          </g>
-        ))}
+        {waypoints.map((w, i) => {
+          const color = STEM_COLORS[i % STEM_COLORS.length];
+          return (
+            <g key={w.id}>
+              <circle
+                cx={w.x}
+                cy={w.y}
+                r={w.radius * OVERLAP_FACTOR}
+                fill="none"
+                stroke={color}
+                strokeWidth="1.5"
+                strokeDasharray="3 5"
+                opacity={0.5 + (gains[w.id] ?? 0) * 0.5}
+              />
+              <circle
+                cx={w.x}
+                cy={w.y}
+                r={7}
+                fill={INK}
+                opacity={0.4 + (gains[w.id] ?? 0) * 0.6}
+              />
+              <text x={w.x + 11} y={w.y + 4} fill={INK} style={{ ...label, fontSize: 9 }} opacity=".75">
+                {w.name}
+              </text>
+            </g>
+          );
+        })}
         <circle cx={position.x} cy={position.y} r="6" fill="#C2452D" stroke={PAPER} strokeWidth="2" />
       </svg>
 

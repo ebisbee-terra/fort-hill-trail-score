@@ -104,6 +104,24 @@ passing through one stem at a time (CLAUDE.md's target). It's a multiplier
 applied at gain-calculation time, not a change to the radius values
 themselves — tune it there.
 
+`INNER_PLATEAU_FRACTION` in `waypointGain.js` (default 0.45) makes full gain
+a real zone instead of a single mathematical point: gain is flat at 1 out to
+that fraction of the (overlap-widened) radius, then smoothstep-falls-off
+from there to the outer edge. Originally added because someone should spend
+real time at full gain, not just an instant at the exact center — but it
+also turned out to fix a real bug: the `stairs` waypoint's stem was barely
+triggering because reaching gain 1.0 required hitting one exact coordinate,
+and any EMA-smoothing lag or minor path imprecision meant it never quite
+got there. Verified live: `stairs` now reliably reaches gain 1.0 during a
+normal walk-through, which it wasn't doing before.
+
+The dev harness map draws these zones directly — each waypoint gets a
+colored, semi-opaque wash (outer = falloff edge, inner = the full-gain
+plateau, same colors as `STEM_COLORS` in `App.jsx`) so overlap between
+neighbors shows as a visibly darker blend, and any real coverage gap shows
+as plain paper. This is what surfaced the North Rim-to-Ridge gap visually,
+confirming the concern already flagged in `TODO.md`.
+
 ## Real trail geometry
 
 `waypoints.js` and `trailPath.js` are built from an actual Overpass/OSM
@@ -159,6 +177,11 @@ real bug turned up wiring this in: the dev harness's gain-bar row for
 and the row silently showed 0.00 regardless of actual state. `App.jsx` now
 special-cases `still` to read `stillnessActive` directly for both the gain
 row and the lock-screen layer stack.
+
+Its fade in/out (`STILL_RAMP_BARS` in `usePositionEngine.js`, currently 4
+bars) is deliberately slower than a waypoint gain ramp (`GAIN_RAMP_BARS`,
+1 bar) — this is meant to feel like "the piece settles," a distinct moment,
+not a continuous position-driven blend.
 
 The dev harness shows the current visit number and a "reset visits" button
 (for testing both the locked and unlocked states without waiting for actual
