@@ -28,6 +28,14 @@ Not a roadmap/priority order — just don't-forget-this items.
 - [x] ~~Walkway routing~~ — fixed. It previously never actually used
       Woodland Loop Trail; corrected against a user-marked-up map
       screenshot, now starting from the Valley Parkway lot.
+- [x] ~~Overlook-to-North Rim dead zone~~ — fixed. Every stem was hitting 0
+      in that stretch: the two waypoints are 176.4m apart, but each one's
+      radius was sized off its *other*, closer neighbor (Overlook off
+      Stairs, North Rim off Earthworks), leaving their combined reach
+      (159.9m) short of the actual gap. Bumped both radii; verified live
+      that minimum gain across the whole stretch is now ~0.066, never 0.
+      Checked every other adjacent pair on the loop the same way — this was
+      the only real gap.
 - [ ] **Earthworks waypoint position** — not derivable from OSM (it's a
       National Register site, deliberately unmapped). Currently placed
       heuristically in `waypoints.js`, flagged `UNCONFIRMED`.

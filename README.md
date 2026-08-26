@@ -119,8 +119,12 @@ The dev harness map draws these zones directly — each waypoint gets a
 colored, semi-opaque wash (outer = falloff edge, inner = the full-gain
 plateau, same colors as `STEM_COLORS` in `App.jsx`) so overlap between
 neighbors shows as a visibly darker blend, and any real coverage gap shows
-as plain paper. This is what surfaced the North Rim-to-Ridge gap visually,
-confirming the concern already flagged in `TODO.md`.
+as plain paper. This is exactly what surfaced a real dead zone between
+`overlook` and `northrim`: at 176.4m apart, their combined reach (159.9m)
+fell short by ~16.5m, and every stem hit gain 0 in that stretch during a
+normal walk-through — confirmed live before fixing it by widening both
+waypoints' radii (see `waypoints.js` notes). Every other adjacent pair on
+the loop was checked the same way and already had healthy overlap margins.
 
 ## Real trail geometry
 
