@@ -24,6 +24,7 @@ export class AudioEngine {
   #buffers = new Map(); // id -> AudioBuffer
   #gains = new Map(); // id -> GainNode (persistent, position-controlled)
   #loopers = new Map(); // id -> { timerId, activeSources: Set }
+  #modulators = new Map(); // id -> { osc, modGain } -- active setBreathingGain LFOs, see below
   #started = false;
 
   async load({ tempo, beatsPerBar, stems, loopCrossfadeBars }) {
@@ -117,12 +118,66 @@ export class AudioEngine {
     const gainNode = this.#gains.get(stemId);
     if (!gainNode) return;
 
+    // A flat target overrides any breathing modulation in progress on this
+    // stem -- without this, turning a weather stem off would ramp its base
+    // toward 0 while the LFO kept adding its swing on top, dipping the
+    // param negative on every downswing instead of actually going silent.
+    this.#stopModulation(stemId);
+
     const now = this.#ctx.currentTime;
     const rampSeconds = barsToSeconds(rampBars, this.#tempo, this.#beatsPerBar);
 
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setValueAtTime(gainNode.gain.value, now);
     gainNode.gain.linearRampToValueAtTime(value, now + rampSeconds);
+  }
+
+  // A continuous, audio-thread-driven slow fade between (base - amplitude)
+  // and (base + amplitude), via an OscillatorNode feeding the stem's own
+  // gain AudioParam -- not a JS setInterval loop re-targeting setGain, which
+  // would be subject to tab-throttling/timer jitter and wouldn't stay smooth
+  // in the background. Web Audio sums an audio-rate connection into an
+  // AudioParam's own scheduled value, so ramping the param to `base` first
+  // and then connecting the (oscillator -> amplitude-scaled gain) on top
+  // gives exactly that range, continuously, with no further JS involvement
+  // once started.
+  setBreathingGain(stemId, { base, amplitude, periodBars }, rampBars) {
+    const gainNode = this.#gains.get(stemId);
+    if (!gainNode) return;
+    this.#stopModulation(stemId);
+
+    const now = this.#ctx.currentTime;
+    const rampSeconds = barsToSeconds(rampBars, this.#tempo, this.#beatsPerBar);
+    const periodSeconds = barsToSeconds(periodBars, this.#tempo, this.#beatsPerBar);
+
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+    gainNode.gain.linearRampToValueAtTime(base, now + rampSeconds);
+
+    const osc = this.#ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = 1 / periodSeconds;
+    const modGain = this.#ctx.createGain();
+    modGain.gain.value = amplitude;
+    osc.connect(modGain);
+    modGain.connect(gainNode.gain);
+    // Starts once the base ramp lands, so the LFO's first swing begins from
+    // a settled base rather than fighting the ramp-in.
+    osc.start(now + rampSeconds);
+    this.#modulators.set(stemId, { osc, modGain });
+  }
+
+  #stopModulation(stemId) {
+    const mod = this.#modulators.get(stemId);
+    if (!mod) return;
+    try {
+      mod.osc.stop();
+    } catch {
+      // already stopped
+    }
+    mod.osc.disconnect();
+    mod.modGain.disconnect();
+    this.#modulators.delete(stemId);
   }
 
   get isStarted() {
@@ -141,6 +196,7 @@ export class AudioEngine {
         source.disconnect();
       }
     }
+    for (const stemId of this.#modulators.keys()) this.#stopModulation(stemId);
     for (const gain of this.#gains.values()) gain.disconnect();
     this.#loopers.clear();
     this.#gains.clear();

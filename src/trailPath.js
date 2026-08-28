@@ -5,52 +5,62 @@
 // notes). Coordinates are meters, same projection as waypoints.js (x=east,
 // y=south/screen-down, centered on the Nature Center).
 //
-// The walkway leg was corrected against a user-marked-up map screenshot of
-// the intended route — the first version of this file used a shortest-path
-// search anchored at the Nature Center's own coordinate, which found a
-// shorter unnamed footway instead of ever actually using Woodland Loop
-// Trail, even though CLAUDE.md names it explicitly. This version starts
-// from the Valley Parkway lot's own service-road access point instead.
+// The walkway leg was rebuilt a third time, this session, and this time it's
+// not a guess at all: the user supplied a fresh OSM export whose bounding
+// box actually reaches Valley Parkway (the previous exports, and the
+// screenshot before that, all stopped short of it). Every prior version of
+// this leg -- the original placeholder diagonal, and the loop-hugging guess
+// that replaced it -- was superseded by running an actual shortest-path
+// search (Dijkstra) over the full walkable OSM graph in that export, from
+// the real Woodland-Loop-Trail/Valley-Parkway junction node to the real
+// stairs-top node this file already used correctly further down. The result
+// crosses a marked cycleway crossing and briefly touches the parking lot's
+// own access aisle -- both real, both legitimately part of the walk, not
+// routing artifacts. Turns out the ORIGINAL placeholder diagonal (now fully
+// replaced) was already closer to this real path than the loop-hugging
+// guess that replaced it was -- worth remembering next time a screenshot is
+// the only source available.
 //
 // This is the one-way trip only. The return trip retraces the same points in
 // reverse, which the mock position source and real GPS position both already
 // handle naturally since gain is purely a function of distance to a waypoint,
 // not of direction of travel.
 export const TRAIL_PATH = [
-  [209.35,78.31],
-  [205.46,75.23],
-  [195.98,67.68],
-  [178.33,53.65],
-  [168.45,44.99],
-  [160.6,34.92],
-  [156.0,25.81],
-  [152.87,14.4],
-  [151.12,0.85],
-  [150.64,-6.18],
-  [152.02,-11.95],
-  [152.87,-15.58],
-  [136.64,-16.71],
-  [124.02,-17.59],
-  [99.86,-18.04],
-  [71.23,-17.37],
-  [57.8,-16.4],
-  [52.67,-16.02],
-  [48.17,-15.31],
-  [46.65,-15.16],
-  [34.43,-13.13],
-  [23.89,-19.18],
-  [14.29,-22.44],
-  [9.03,-24.9],
-  [1.43,-28.02],
-  [-8.52,-29.7],
-  [-12.78,-29.07],
-  [-17.69,-28.3],
-  [-27.22,-28.19],
-  [-38.85,-29.53],
-  [-48.03,-27.74],
-  [-59.91,-26.89],
-  [-67.84,-27.25],
-  [-74.82,-28.31],
+  [205.67,83.98],
+  [201.55,80.88],
+  [205.99,75.14],
+  [196.49,67.60],
+  [178.79,53.59],
+  [168.89,44.94],
+  [161.01,34.87],
+  [156.41,25.78],
+  [153.27,14.38],
+  [151.51,0.84],
+  [151.03,-6.18],
+  [152.41,-11.94],
+  [153.27,-15.56],
+  [136.99,-16.69],
+  [124.34,-17.57],
+  [100.12,-18.01],
+  [71.41,-17.35],
+  [57.95,-16.38],
+  [52.80,-16.00],
+  [48.29,-15.29],
+  [46.77,-15.14],
+  [34.52,-13.12],
+  [23.96,-19.16],
+  [14.33,-22.41],
+  [9.06,-24.87],
+  [1.43,-27.99],
+  [-8.55,-29.66],
+  [-12.81,-29.03],
+  [-17.73,-28.27],
+  [-27.29,-28.15],
+  [-38.96,-29.50],
+  [-48.15,-27.71],
+  [-60.07,-26.85],
+  [-68.02,-27.22],
+  [-75.01,-28.28],
   [-93.17,-10.24],
   [-106.36,-8.45],
   [-108.27,-8.76],

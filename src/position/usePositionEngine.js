@@ -27,8 +27,12 @@ const STILL_RAMP_BARS = 4;
 // so neighboring waypoints' zones overlap more and someone spends longer
 // inside 2-3 blended layers instead of passing through a single stem at a
 // time. Tuned against real waypoint spacing (see waypoints.js) — CLAUDE.md's
-// 80m-minimum / 150-200m-typical rule.
-export const OVERLAP_FACTOR = 1.5;
+// 80m-minimum / 150-200m-typical rule. Raised from 1.5 to 1.6 alongside the
+// per-waypoint radius/ellipse tuning in waypoints.js, together closing every
+// remaining spot on the trail where combined gain across all stems dropped
+// below the 0.70 floor (see waypoints.js's floor note for the full reasoning
+// and the specific gaps this was covering).
+export const OVERLAP_FACTOR = 1.6;
 
 const PATH = TRAIL_PATH;
 

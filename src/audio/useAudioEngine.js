@@ -41,7 +41,11 @@ export function useAudioEngine() {
     engineRef.current?.setGain(stemId, value, rampBars);
   }, []);
 
+  const setBreathingGain = useCallback((stemId, modulation, rampBars) => {
+    engineRef.current?.setBreathingGain(stemId, modulation, rampBars);
+  }, []);
+
   useEffect(() => () => engineRef.current?.dispose(), []);
 
-  return { status, error, boot, shutdown, setGain };
+  return { status, error, boot, shutdown, setGain, setBreathingGain };
 }
