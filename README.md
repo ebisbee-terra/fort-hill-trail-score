@@ -206,6 +206,16 @@ yet driven by a real weather fetch or a solar-altitude calculation from
 actual time/location, and not yet wired to the audio engine (no weather stem
 or daypart filter/reverb chain exists yet).
 
+## Map color scheme
+
+`mapTint.js` tints the paper map's background based on weather and time of
+day — two sequential color blends (weather, then daypart) toward named
+target colors, in the same spirit as the prototype's single daypart-only
+blend. Clear/midday stays close to the base paper color; wet/dusk shifts
+noticeably cooler and darker. Applied only to the map's background (not the
+lock-screen preview, which stays a dark OS-style card regardless of
+conditions — that's not really themeable the way a paper map is).
+
 ## Lock screen preview
 
 CLAUDE.md calls the lock-screen media card "the primary interface during the

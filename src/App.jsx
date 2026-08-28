@@ -7,6 +7,7 @@ import { WAYPOINTS } from "./waypoints.js";
 import { CONTEXT_TRAILS, RIVER, WATER_POLYGONS, WOOD_POLYGONS } from "./basemap.js";
 import { resetVisitCount } from "./visitCount.js";
 import { ConditionIcon } from "./conditionIcons.jsx";
+import { getMapTint } from "./mapTint.js";
 
 const WEATHER_OPTIONS = [
   ["clear", "Clear"],
@@ -251,7 +252,7 @@ function ZoomButton({ children, onClick, disabled }) {
   );
 }
 
-function TrailMap({ path, waypoints, gains, position }) {
+function TrailMap({ path, waypoints, gains, position, bgColor = PAPER }) {
   // zoom: 0 = tightest follow (centered on the walker), 1 = whole trail
   // (centered on the trail itself) -- the farthest out the user can go.
   // Starts 2 clicks out from the tightest zoom rather than fully zoomed in.
@@ -271,7 +272,7 @@ function TrailMap({ path, waypoints, gains, position }) {
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <svg
         viewBox={`${viewX} ${viewY} ${width} ${height}`}
-        style={{ width: "100%", height: "100%", background: PAPER, borderRadius: 8, display: "block" }}
+        style={{ width: "100%", height: "100%", background: bgColor, borderRadius: 8, display: "block" }}
       >
         {WOOD_POLYGONS.map((poly, i) => (
           <path key={i} d={toArea(poly)} fill={WOOD} opacity=".35" stroke="none" />
@@ -426,6 +427,7 @@ export default function App() {
   // weather stem or daypart filter/reverb chain exists yet). Just the icons.
   const [weather, setWeather] = useState("clear");
   const [daypart, setDaypart] = useState("midday");
+  const mapTint = getMapTint(weather, daypart);
 
   const [showLockScreen, setShowLockScreen] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
@@ -505,7 +507,7 @@ export default function App() {
           {showLockScreen ? (
             <LockScreenPreview stack={stack} weatherIcon={weather} daypartIcon={daypart} />
           ) : (
-            <TrailMap path={path} waypoints={WAYPOINTS} gains={gains} position={position} />
+            <TrailMap path={path} waypoints={WAYPOINTS} gains={gains} position={position} bgColor={mapTint} />
           )}
         </div>
 
@@ -518,7 +520,7 @@ export default function App() {
             {showLockScreen ? (
               <LockScreenPreview stack={stack} weatherIcon={weather} daypartIcon={daypart} />
             ) : (
-              <TrailMap path={path} waypoints={WAYPOINTS} gains={gains} position={position} />
+              <TrailMap path={path} waypoints={WAYPOINTS} gains={gains} position={position} bgColor={mapTint} />
             )}
           </PhonePreview>
         )}
